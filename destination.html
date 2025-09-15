@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<title>Маршрут самолёта</title>
+<style>
+  body {
+    margin:0;
+    font-family:Arial, sans-serif;
+  }
+
+  .back-btn {
+    display:inline-block;
+    margin:15px;
+    padding:10px 16px;
+    background:#0073e6;
+    color:#fff;
+    text-decoration:none;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:bold;
+    transition:background 0.3s ease;
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  }
+  .back-btn:hover { background:#005bb5; }
+
+  .map-wrap {
+    position:relative;
+    width:100%;
+    max-width:1600px;
+    margin:20px auto;
+    aspect-ratio:2.1/1;
+    background-image:url('images/world-map.png'); 
+    background-size:contain;
+    background-repeat:no-repeat;
+    background-position:center;
+    overflow:hidden;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .dot {
+    position:absolute;
+    transform:translate(-50%,-50%);
+    z-index:5;
+    cursor:pointer;
+  }
+  .dot::before {
+    content:"";
+    position:absolute;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:#e60000;
+    box-shadow:0 0 20px 12px rgba(230,0,0,0.25);
+    transform:translate(-50%,-50%);
+    left:50%; top:50%;
+  }
+
+  .label {
+    position:absolute;
+    top:-22px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(255,255,255,0.95);
+    padding:3px 8px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:bold;
+    white-space:nowrap;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position:absolute;
+    bottom:120%;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,0.8);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:normal;
+    white-space:nowrap;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s ease, transform 0.3s ease;
+  }
+  .dot:hover .tooltip {
+    opacity:1;
+    transform:translateX(-50%) translateY(-5px);
+  }
+
+  .plane {
+    position:absolute;
+    width:36px;
+    height:36px;
+    background:url("images/airplaneee.png") no-repeat center/contain;
+    transform:translate(-50%,-50%) rotate(0deg);
+    z-index:10;
+    transition: left 3s ease-in-out, top 3s ease-in-out, transform 1.2s ease-in-out;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  }
+
+  svg.route-line {
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    overflow:visible;
+    z-index:3;
+  }
+  .route-path {
+    fill:none;
+    stroke:red;
+    stroke-width:2;
+    stroke-dasharray:1000;
+    stroke-dashoffset:1000;
+    animation: drawPath 14s linear forwards;
+  }
+  @keyframes drawPath {
+    to { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-btn" id="backBtn">← Назад</a>
+
+<div class="map-wrap" id="map">
+  <svg class="route-line">
+    <path id="routePath" class="route-path" d=""/>
+  </svg>
+
+  <!-- Города -->
+  <div class="dot" style="left:34%; top:28%;">
+    <div class="label">London</div>
+    <div class="tooltip">🇬🇧 London — Heathrow Airport</div>
+  </div>
+  <div class="dot" style="left:36.5%; top:31%;">
+    <div class="label">Belgium</div>
+    <div class="tooltip">🇧🇪 Brussels — Zaventem Airport</div>
+  </div>
+  <div class="dot" style="left:45.5%; top:39%;">
+    <div class="label">Istanbul</div>
+    <div class="tooltip">🇹🇷 Istanbul — New Airport</div>
+  </div>
+  <div class="dot" style="left:52%; top:39%;">
+    <div class="label">Tbilisi</div>
+    <div class="tooltip">🇬🇪 Tbilisi International Airport</div>
+  </div>
+  <div class="dot" style="left:52%; top:42%;">
+    <div class="label">Batumi</div>
+    <div class="tooltip">🇬🇪 Batumi International Airport</div>
+  </div>
+  <div class="dot" style="left:63%; top:37%;">
+    <div class="label">Issyk-Kul</div>
+    <div class="tooltip">🇰🇬 Tamchy (Issyk-Kul Intl)</div>
+  </div>
+  <div class="dot" style="left:48%; top:54%;">
+    <div class="label">Sharm El-Sheikh</div>
+    <div class="tooltip">🇪🇬 Sharm El-Sheikh Airport</div>
+  </div>
+  <div class="dot" style="left:55%; top:56%;">
+    <div class="label">Madina</div>
+    <div class="tooltip">🇸🇦 Prince Mohammad bin Abdulaziz</div>
+  </div>
+
+  <div class="plane" id="plane"></div>
+</div>
+
+<script>
+const route = [
+  {x:"34%", y:"28%"},  // London
+  {x:"36.5%", y:"31%"}, // Belgium
+  {x:"45.5%", y:"39%"}, // Istanbul
+  {x:"52%", y:"39%"},   // Tbilisi
+  {x:"52%", y:"42%"},   // Batumi
+  {x:"63%", y:"37%"},   // Issyk-Kul
+  {x:"48%", y:"54%"},   // Sharm El-Sheikh
+  {x:"55%", y:"56%"}    // Madina
+];
+
+const plane = document.getElementById("plane");
+const routePath = document.getElementById("routePath");
+
+// Построение линии
+function buildPath(points) {
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let j=1; j<points.length; j++) {
+    d += ` L ${points[j].x} ${points[j].y}`;
+  }
+  return d;
+}
+routePath.setAttribute("d", buildPath(route));
+
+let i = 0;
+function movePlane() {
+  const point = route[i];
+  const next = route[(i+1)%route.length];
+
+  plane.style.left = point.x;
+  plane.style.top = point.y;
+
+  const px = parseFloat(point.x), py = parseFloat(point.y);
+  const nx = parseFloat(next.x), ny = parseFloat(next.y);
+  const dx = nx - px, dy = ny - py;
+  const angle = Math.atan2(dy, dx) * (180/Math.PI);
+
+  setTimeout(()=>{
+    plane.style.transform = `translate(-50%,-50%) rotate(${angle}deg)`;
+    plane.style.left = next.x;
+    plane.style.top = next.y;
+    i = (i+1)%route.length;
+    setTimeout(movePlane, 3200);
+  },300);
+}
+
+movePlane();
+</script>
+<script src="lang.js"></script>
+</body>
+</html>
